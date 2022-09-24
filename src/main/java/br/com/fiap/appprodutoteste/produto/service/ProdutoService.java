@@ -14,6 +14,10 @@ public interface ProdutoService {
 
     List<Produto> getAllProducts();
 
+    Produto findById(Long id);
 
+    void deleteById(Long id);
+
+    Produto update(Long id,ProdutoDTO produtoDTO);
 
 }

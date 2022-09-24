@@ -1,27 +1,16 @@
 package br.com.fiap.appprodutoteste.produto.service.impl;
 
 import br.com.fiap.appprodutoteste.produto.model.Produto;
-import br.com.fiap.appprodutoteste.produto.model.dto.EmailDTO;
 import br.com.fiap.appprodutoteste.produto.model.dto.ProdutoDTO;
 import br.com.fiap.appprodutoteste.produto.repositories.ProdutoRepository;
 import br.com.fiap.appprodutoteste.produto.service.ProdutoService;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import javax.validation.constraints.Email;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Log4j2
@@ -38,13 +27,8 @@ public class ProdutoServiceImpl implements ProdutoService {
         Produto produto = new Produto();
         modelMapper.map(produtoDTO, produto);
 
-        produtoRepository.save(produto);
-        String sucesso =  enviarEmail(produto);
-        if(sucesso.equalsIgnoreCase("SEND")){
-            log.info("Email enviado com sucesso!");
-        }
 
-        return produto;
+        return produtoRepository.save(produto);
     }
 
     @Override
@@ -52,42 +36,38 @@ public class ProdutoServiceImpl implements ProdutoService {
         return produtoRepository.findAll();
     }
 
+    @Override
+    public Produto findById(Long id) {
+        if(produtoRepository.existsById(id)){
+            return produtoRepository.findById(id).get();
+        }
 
-    private String enviarEmail(Produto produto) {
-        log.info("Enviando dados do produto para email");
+        throw new RuntimeException("Nao foi encontrado nenhum produto com este ID");
 
-        RestTemplate restTemplate = new RestTemplate();
+    }
 
-        String url = "http://localhost:8082/send-email";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    @Override
+    public void deleteById(Long id) {
+        if(!produtoRepository.existsById(id)){
+            throw new RuntimeException("Nao foi encontrado nenhum produto com este ID");
+        }
 
-        HashMap<String, String> map = new HashMap<>();
-        map.put("emailTo", "brunoberga77@gmail.com");
-        map.put("subject", "CADASTRO DE PRODUTO");
-        map.put("text", "O produto: " + produto.getNome() + " foi cadastrado com sucesso na base de dados.\nMais Informacoes:" +
-                "\nPRODUTO: \n\nNOME: " + produto.getNome() + "\nQUANTIDADE: " + produto.getQuantidade() + "\nVALOR: " + produto.getValor());
+        produtoRepository.deleteById(id);
 
-        HttpEntity<HashMap<String, String>> request = new HttpEntity<>(map, headers);
+    }
 
-        ResponseEntity<EmailDTO> response = restTemplate.postForEntity(url, request, EmailDTO.class);
+    @Override
+    public Produto update(Long id, ProdutoDTO produtoDTO) {
+        if(!produtoRepository.existsById(id)){
+            throw new RuntimeException("Nao foi encontrado nenhum produto com este ID");
+        }
 
-        EmailDTO emailDTO2 = response.getBody();
-        return emailDTO2.getStatusEmail();
+        Produto produto = findById(id);
 
-//        String uri = "send-email";
-//        String url = "http://localhost:8082/";
-//        EmailDTO emailDTO = new EmailDTO();
-//        emailDTO.setEmailTo("brunoberga77@gmail.com");
-//        emailDTO.setSubject("CADASTRO DE PRODUTOS");
-//        emailDTO.setText("TESTE");
-//
-//        Mono<EmailDTO> emailDTOMono = WebClient
-//                .create("url")
-//                .post()
-//                .uri(uri)
-//                .body(BodyInserters.fromValue(emailDTO))
-//                .retrieve()
-//                .bodyToMono(EmailDTO.class);
+        ModelMapper modelMapper = new ModelMapper();
+
+        modelMapper.map(produtoDTO, produto);
+
+        return produto;
     }
 }
